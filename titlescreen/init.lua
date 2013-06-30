@@ -6,10 +6,10 @@ titlescreen = {}
 -- Path: a list of points the title should show
 -- the title screen will start at [0]
 titlescreen.path = {
-	[0] = {x=51,y=13,z=0},
-	[1] = {x=86,y=20,z=28},
-	[2] = {x=91,y=15,z=-11},
-	[3] = {x=73,y=24,z=-35},
+	[0] = {x=10,y=20,z=0},
+	[1] = {x=0,y=20,z=10},
+	[2] = {x=-10,y=20,z=0},
+	[3] = {x=0,y=20,z=-10},
 }
 
 -- The camera speed (something between 1 and 10 should do it)
@@ -20,7 +20,12 @@ titlescreen.camera_speed = 2.5
 
 --- Start at a random point from path
 --- Make use of find_path (?)
---- Teleport the player to some random position (or spawnpoint) when he starts playing
+--- Teleport the player to where he was before showing the title screen
+--- Read the path from an external file, and camera speed from a setting
+--- Make an in-game path editor (at least, a command)
+--- Add a dummy logo (minetest's logo ? :p)
+--- Don't allow player to interact when he's on title (revoke interact?)
+--- Make him invincible and invisible (so other players don't see him floating, and can't kill him)
 
 -- now the real mod
 
@@ -33,6 +38,7 @@ end
 
 titlescreen.show_title = function(player)
 	local pn = player:get_player_name()
+	if titlescreen.is_title[pn] then titlescreen.hide_title(player) end
 	titlescreen.hide_hud(player)
 	titlescreen.hud.logo[pn] = player:hud_add({
 		hud_elem_type = "image",
@@ -77,7 +83,12 @@ minetest.register_entity("titlescreen:camera",{
 	point_index = 0,
 	on_step = function(self, dtime)
 		if not self.owner then
-			self.object:remove()
+			-- let 5 seconds to set the owner, else, it's a dead entity
+			minetest.after(5, function(...)
+				if not self.owner then
+					self.object:remove()
+				end
+			end)
 			return
 		end
 		local point = titlescreen.path[self.point_index]
@@ -104,6 +115,7 @@ minetest.register_entity("titlescreen:camera",{
 			z = d.z/dt*speed,
 		})
 		local player = minetest.get_player_by_name(self.owner)
+		if not player then return end
 		if titlescreen.is_title[self.owner] then
 			local c = player:get_player_control()
 			if c.sneak and c.jump then
@@ -131,8 +143,8 @@ minetest.register_chatcommand("title", {
 })
 
 minetest.register_on_joinplayer(function(player)
-	-- the minetest.after is hacky of course
-	minetest.after(1, function(...)
+	-- FIXME @Minetest devs: join player works bad, really bad.
+	minetest.after(2.5, function(...)
 		titlescreen.show_title(player)
 	end)
 end)
